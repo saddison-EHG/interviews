@@ -7,10 +7,11 @@
 UCLASS()
 class CODEREVIEW_API GameActor : public AActor
 {
-	static std::function<void(TArray<GameActor*>)> ActorAdded;
-	
 	std::function<void(GameActor*)> ActorDied;
 	std::function<void(GameActor*)> ActorHealthChanged;
+
+	DECLARE_MULTICAST_DELEGATE_OneParam(FActorsDelegate, TArray<GameActor*>);
+	static FActorsDelegate ActorAdded;
 
 	DECLARE_MULTICAST_DELEGATE(FTest);
 	FTest Test;

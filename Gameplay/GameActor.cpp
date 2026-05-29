@@ -8,7 +8,7 @@ GameActor::GameActor()
 void GameActor::BeginPlay()
 {
 	AllActors.Add(this);
-	ActorAdded(AllActors);
+	ActorAdded.Broadcast(AllActors);
 	
 	_currentHealth = StartingHealth;
 	Super::BeginPlay();
@@ -24,17 +24,22 @@ void GameActor::Tick(float DeltaSeconds)
 	Super::Tick(DeltaSeconds);
 }
 
+void GameActor::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+}
+
 void GameActor::TakeDamage(int damage)
 {
 	_currentHealth -= damage;
 	ActorHealthChanged(this);
 	if (HasAuthority())
 	{
-		RecordHealthToServer(damage);
+		RecordHealthToClient(damage);
 	}
 	else
 	{
-		RecordHealthToClient(damage);
+		RecordHealthToServer(damage);
 	}
 	
 	if (_currentHealth <= 0)
