@@ -4,10 +4,24 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "AssetCleanupLibrary.generated.h"
 
-DECLARE_DELEGATE_OneParam(FOnAssetRenamed, FString);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAssetSaved,  const FString&, AssetPath);
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAssetTagged, FString, AssetPath);
+USTRUCT(BlueprintType)
+struct FAssetModification
+{
+    GENERATED_BODY()
  
+public:
+    UPROPERTY(BlueprintReadOnly, Category = "Asset Cleanup")
+    FString AssetPath;
+ 
+    UPROPERTY(BlueprintReadOnly, Category = "Asset Cleanup")
+    FString OwnerName;
+ 
+    UPROPERTY(BlueprintReadOnly, Category = "Asset Cleanup")
+    TArray<FString> Tags;
+};
+
 USTRUCT(BlueprintType)
 struct FAssetCleanupResult
 {
@@ -15,67 +29,32 @@ struct FAssetCleanupResult
  
 public:
     UPROPERTY(BlueprintReadOnly, Category = "Asset Cleanup")
-    int32 RenamedAssetCount = 0;
- 
-    UPROPERTY(BlueprintReadOnly, Category = "Asset Cleanup")
-    int32 TaggedAssetCount = 0;
- 
-    UPROPERTY(BlueprintReadOnly, Category = "Asset Cleanup")
-    FString LastReportPath;
- 
-    UPROPERTY(BlueprintReadOnly, Category = "Asset Cleanup")
-    TArray<FString> TouchedAssets;
+    TArray<FAssetModification> AssetsChanged;
 };
  
 UCLASS()
-class CODEREVIEW_API UAssetCleanupLibraryV4 : public UBlueprintFunctionLibrary
+class UAssetCleanupLibrary : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
  
-    static FAssetCleanupResult LastResult;
- 
+    static FAssetCleanupResult _lastCleanupResult;
+    
 public:
-
-    FOnAssetTagged OnAssetTagged;
     
     UPROPERTY(BlueprintAssignable, Category = "Asset Cleanup")
-    FOnAssetTagged OnAssetSaved;
+    FOnAssetSaved OnAssetSaved;
  
     UFUNCTION(BlueprintCallable, Category = "Asset Cleanup")
-    static FAssetCleanupResult CleanupAssets(
-        const FString& Folder,
-        const FString& RequiredPrefix,
+    static bool CleanupAssets(const FString& Folder,
         const FString& OwnerName,
-        bool bSaveAssets);
-    
+        TArray<FString> TagsToApply,
+        const FString& ReportOutputPath);
+
+private:
+
     UFUNCTION(BlueprintCallable, Category = "Asset Cleanup")
-    static void BatchTagAssets(
-        TArray<FAssetData> AssetsToProcess,
-        TArray<FString>    TagsToApply,
-        const FString&     OwnerName);
-    
-    UFUNCTION(BlueprintCallable, Category = "Asset Cleanup")
-    static void CollectAssetPaths(
-        const TArray<FAssetData>& Assets,
-        TArray<FString>&          OutPaths);
+    static TArray<FAssetData> GetAssetsInFolder(const FString& Folder);
  
     UFUNCTION(BlueprintCallable, Category = "Asset Cleanup")
-    static bool ExportDependencyReport(
-        const FString& Folder,
-        const FString& OutputPath);
- 
-    UFUNCTION(BlueprintPure, Category = "Asset Cleanup")
-    static FAssetCleanupResult GetLastResult();
-    
-    UPROPERTY(EditAnywhere, Category = "Asset Cleanup")
-    bool StrictNamingEnabled = false;
-    
-    UPROPERTY(EditAnywhere, Category = "Asset Cleanup")
-    FString defaultOwnerName;
-    
-    UPROPERTY(EditAnywhere, Category = "Asset Cleanup")
-    TArray<FString> m_cachedAssetPaths;
-    
-    UPROPERTY(EditAnywhere, Category = "Asset Cleanup")
-    int32 MaxRenameWarnings = 50;
+    static bool ExportReport(const FString& OutputPath);
 };
